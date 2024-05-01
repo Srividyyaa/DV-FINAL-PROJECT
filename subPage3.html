@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.15.0/moment.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <style>
+      path {
+        stroke: #fff;
+      }
+
+      path:hover {
+        opacity: 0.9;
+      }
+
+      rect:hover {
+        fill: #7f8c8d;
+      }
+
+      .axis {
+        font: 10px sans-serif;
+      }
+
+      .legend tr {
+        border-bottom: 1px solid grey;
+      }
+
+      .legend tr:first-child {
+        border-top: 1px solid grey;
+      }
+
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+      }
+
+      #redirectButton {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        padding-bottom: 0.375rem;
+        font-size: 1rem;
+        border-radius: 0.25rem;
+        border: none;
+        color: #fff;
+        background: #6c757d !important;
+        height: auto !important;
+        transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+      }
+
+      #redirectButton {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        padding: 10px 20px;
+        font-size: 1.25rem;
+        border-radius: 0.5rem;
+        border: none;
+        color: #fff;
+        background: #6c757d !important;
+        height: auto !important;
+        transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+      }
+
+      #redirectButton:hover {
+        background: #5c636a !important;
+      }
+
+      body,
+      html {
+        max-width: 100%;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+      }
+
+      .header-title {
+        text-align: center;
+        font-size: 30px;
+        color: #333;
+        padding: 2px 0;
+        padding-bottom: 0;
+        font-weight: bold;
+      }
+
+      .center-box:hover {
+        background: rgba(0, 0, 0, 0.8);
+        color: #f1f1f1;
+        transition: all 0.15s ease-in;
+      }
+
+      .x.axis path {
+        display: none;
+      }
+
+      .legend {
+        position: absolute;
+        right: 20px;
+        top: 60px;
+        margin: 10px;
+      }
+
+      .legend td {
+        padding: 4px 5px;
+        vertical-align: bottom;
+      }
+
+      .legendFreq,
+      .legendPerc {
+        width: 50px;
+      }
+
+      #dashboard {
+        padding-left: 150px;
+        padding-right: 100px;
+        padding-top: 120px;
+      }
+    </style>
+  <body>
+    <header>
+      <div class="row">
+        <ul class="main-nav">
+          <h1 class="header-title">Percentage of arms usage according to year</h1>
+          <button id="redirectButton" class="btn btn-secondary">Home</button>
+        </ul>
+      </div>
+    </header>
+    <div id='dashboard'></div>
+    <script>
+      function dashboard(id, fData) {
+        var barColor = '#95a5a6';
+        var colort = d3.scale.category20();
+
+        function segColor(c) {
+          return {
+            gun: "#003f5c",
+            unarmed: "#444e86",
+            other: "#955196",
+            replica: "#dd5182",
+            knife: "#ff6e54",
+            blunt_object: "#ffb800",
+            undetermined: "#ffa600"
+          } [c];
+        }
+        fData.forEach(function(d) {
+          d.total = d.freq.gun + d.freq.unarmed + d.freq.other + d.freq.replica + d.freq.knife + d.freq.blunt_object + d.freq.undetermined;
+        });
+
+        function histoGram(fD) {
+          var hG = {},
+            hGDim = {
+              t: 60,
+              r: 0,
+              b: 30,
+              l: 0
+            };
+          hGDim.w = 500 - hGDim.l - hGDim.r,
+            hGDim.h = 300 - hGDim.t - hGDim.b;
+          var hGsvg = d3.select(id).append("svg").attr("width", hGDim.w + hGDim.l + hGDim.r).attr("height", hGDim.h + hGDim.t + hGDim.b).append("g").attr("transform", "translate(" + hGDim.l + "," + hGDim.t + ")");
+          var x = d3.scale.ordinal().rangeRoundBands([0, hGDim.w], 0.1).domain(fD.map(function(d) {
+            return d[0];
+          }));
+          hGsvg.append("g").attr("class", "x axis").attr("transform", "translate(0," + hGDim.h + ")").call(d3.svg.axis().scale(x).orient("bottom"));
+          var y = d3.scale.linear().range([hGDim.h, 0]).domain([0, d3.max(fD, function(d) {
+            return d[1];
+          })]);
+          var bars = hGsvg.selectAll(".bar").data(fD).enter().append("g").attr("class", "bar");
+          bars.append("rect").attr("x", function(d) {
+            return x(d[0]);
+          }).attr("y", function(d) {
+            return y(d[1]);
+          }).attr("width", x.rangeBand()).attr("height", function(d) {
+            return hGDim.h - y(d[1]);
+          }).attr('fill', barColor).on("mouseover", mouseover).on("mouseout", mouseout);
+          bars.append("text").text(function(d) {
+            return d3.format(",")(d[1])
+          }).attr("x", function(d) {
+            return x(d[0]) + x.rangeBand() / 2;
+          }).attr("y", function(d) {
+            return y(d[1]) - 5;
+          }).attr("text-anchor", "middle");
+
+          function mouseover(d) {
+            var st = fData.filter(function(s) {
+                return s.armed_with == d[0];
+              })[0],
+              nD = d3.keys(st.freq).map(function(s) {
+                return {
+                  type: s,
+                  freq: st.freq[s]
+                };
+              });
+            pC.update(nD);
+            leg.update(nD);
+          }
+
+          function mouseout(d) {
+            pC.update(tF);
+            leg.update(tF);
+          }
+          hG.update = function(nD, color) {
+            y.domain([0, d3.max(nD, function(d) {
+              return d[1];
+            })]);
+            var bars = hGsvg.selectAll(".bar").data(nD);
+            bars.select("rect").transition().duration(500).attr("y", function(d) {
+              return y(d[1]);
+            }).attr("height", function(d) {
+              return hGDim.h - y(d[1]);
+            }).attr("fill", color);
+            bars.select("text").transition().duration(500).text(function(d) {
+              return d3.format(",")(d[1])
+            }).attr("y", function(d) {
+              return y(d[1]) - 5;
+            });
+          }
+          return hG;
+        }
+
+        function pieChart(pD) {
+          var pC = {},
+            pieDim = {
+              w: 250,
+              h: 250
+            };
+          pieDim.r = Math.min(pieDim.w, pieDim.h) / 2;
+          var piesvg = d3.select(id).append("svg").attr("width", pieDim.w).attr("height", pieDim.h).append("g").attr("transform", "translate(" + pieDim.w / 2 + "," + pieDim.h / 2 + ")");
+          var arc = d3.svg.arc().outerRadius(pieDim.r - 10).innerRadius(0);
+          var pie = d3.layout.pie().sort(null).value(function(d) {
+            return d.freq;
+          });
+          piesvg.selectAll("path").data(pie(pD)).enter().append("path").attr("d", arc).each(function(d) {
+            this._current = d;
+          }).style('fill', function(d, i) {
+            return colort(i);
+          }).on("mouseover", mouseover).on("mouseout", mouseout);
+          pC.update = function(nD) {
+            piesvg.selectAll("path").data(pie(nD)).transition().duration(500).attrTween("d", arcTween);
+          }
+
+          function mouseover(d, i) {
+            hG.update(fData.map(function(v) {
+              return [v.armed_with, v.freq[d.data.type]];
+            }), colort(i));
+          }
+
+          function mouseout(d) {
+            hG.update(fData.map(function(v) {
+              return [v.armed_with, v.total];
+            }), barColor);
+          }
+
+          function arcTween(a) {
+            var i = d3.interpolate(this._current, a);
+            this._current = i(0);
+            return function(t) {
+              return arc(i(t));
+            };
+          }
+          return pC;
+        }
+
+        function legend(lD) {
+          var leg = {};
+          var legend = d3.select(id).append("table").attr('class', 'legend');
+          var tr = legend.append("tbody").selectAll("tr").data(lD).enter().append("tr");
+          tr.append("td").append("svg").attr("width", '16').attr("height", '16').append("rect").attr("width", '16').attr("height", '16').attr("fill", function(d, i) {
+            return colort(i);
+          });
+          tr.append("td").text(function(d) {
+            return d.type;
+          });
+          tr.append("td").attr("class", 'legendFreq').text(function(d) {
+            return d3.format(",")(d.freq);
+          });
+          tr.append("td").attr("class", 'legendPerc').text(function(d) {
+            return getLegend(d, lD);
+          });
+          leg.update = function(nD) {
+            var l = legend.select("tbody").selectAll("tr").data(nD);
+            l.select(".legendFreq").text(function(d) {
+              return d3.format(",")(d.freq);
+            });
+            l.select(".legendPerc").text(function(d) {
+              return getLegend(d, nD);
+            });
+          }
+
+          function getLegend(d, aD) {
+            console.log(d.freq);
+            console.log(d3.sum(aD.map(function(v) {
+              return v.freq;
+            })));
+            return d3.format("%")(d.freq / d3.sum(aD.map(function(v) {
+              return v.freq;
+            })));
+          }
+          return leg;
+        }
+        var tF = ['gun', 'unarmed', 'other', 'replica', 'knife', 'blunt_object', 'undetermined'].map(function(d) {
+          return {
+            type: d,
+            freq: d3.sum(fData.map(function(t) {
+              return t.freq[d];
+            }))
+          };
+        });
+        var sF = fData.map(function(d) {
+          return [d.armed_with, d.total];
+        });
+        var hG = histoGram(sF),
+          pC = pieChart(tF),
+          leg = legend(tF);
+      }
+    </script>
+    <script>
+      d3.csv("https://raw.githubusercontent.com/sunchusanthoshi/DataVisualization/main/fatal-police-shootings-new.csv", function(error, csv_data) {
+        csv_data.forEach(function(d, i) {
+          var date = new Date(d.date);
+          d.date = moment(date).format('YYYY');
+        });
+        var data = d3.nest().key(function(d) {
+          return d.date;
+        }).rollup(function(v) {
+          var gun = 0;
+          var unarmed = 0;
+          var other = 0;
+          var replica = 0;
+          var knife = 0;
+          var blunt_object = 0;
+          var undetermined = 0;
+          for (var i = 0; i < v.length; i++) {
+            if (v[i].armed_with == "gun") gun = gun + 1;
+            else
+            if (v[i].armed_with == "unarmed") unarmed = unarmed + 1;
+            else
+            if (v[i].armed_with == "other") other = other + 1;
+            else
+            if (v[i].armed_with == "replica") replica = replica + 1;
+            else
+            if (v[i].armed_with == "knife") knife = knife + 1;
+            else
+            if (v[i].armed_with == "blunt_object") blunt_object = blunt_object + 1;
+            else undetermined = undetermined + 1;
+          }
+          armed_with = {
+            gun: gun,
+            unarmed: unarmed,
+            other: other,
+            replica: replica,
+            knife: knife,
+            blunt_object: blunt_object,
+            undetermined: undetermined
+          };
+          return armed_with;
+        }).entries(csv_data).map(function(group) {
+          return {
+            armed_with: group.key,
+            freq: group.values
+          }
+        });
+        dashboard('#dashboard', data);
+        document.getElementById("redirectButton").addEventListener("click", function() {
+          window.location.href = "MainPage.html";
+        });
+      });
+    </script>
+  </body>
+</html>

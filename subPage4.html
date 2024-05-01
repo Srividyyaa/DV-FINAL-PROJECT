@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Bar chart</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <style>
+      body,
+      html {
+        max-width: 100%;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+      }
+
+      #redirectButton {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        padding-bottom: 0.375rem;
+        font-size: 1rem;
+        border-radius: 0.25rem;
+        border: none;
+        color: #fff;
+        background: #6c757d !important;
+        height: auto !important;
+        transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+      }
+
+      #redirectButton:hover {
+        background: #5c636a !important;
+      }
+
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+      }
+
+      .x.axis path {
+        display: none;
+      }
+
+      .select-css {
+        text-align: center;
+        display: block;
+        font-size: 12px;
+        font-family: sans-serif;
+        font-weight: 700;
+        color: #444;
+        line-height: 1.3;
+        padding: .6em 1.4em .5em .8em;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin: 0;
+        border: 1px solid #aaa;
+        box-shadow: 0 1px 0 1px rgba(0, 0, 0, .04);
+        border-radius: .5em;
+        -moz-appearance: none;
+        -webkit-appearance: none;
+        appearance: none;
+        background-color: #fff;
+      }
+
+      .select-css::-ms-expand {
+        display: none;
+      }
+
+      .select-css:hover {
+        border-color: #888;
+      }
+
+      .select-css:focus {
+        border-color: #aaa;
+        box-shadow: 0 0 1px 3px rgba(59, 153, 252, .7);
+        box-shadow: 0 0 0 3px -moz-mac-focusring;
+        color: #222;
+        outline: none;
+      }
+
+      .select-css option {
+        font-weight: normal;
+      }
+
+      *[dir="rtl"] .select-css,
+      :root:lang(ar) .select-css,
+      :root:lang(iw) .select-css {
+        background-position: left .7em top 50%, 0 0;
+        padding: .6em .8em .5em 1.4em;
+      }
+
+      .select-css:disabled:hover,
+      .select-css[aria-disabled=true] {
+        border-color: #aaa;
+      }
+
+      #parent {
+        display: flex;
+        height: 100%;
+        padding: 30px
+      }
+
+      .header-title {
+        text-align: center;
+        font-size: 30px;
+        color: #333;
+        padding: 2px 0;
+        padding-bottom: 0;
+        font-weight: bold;
+      }
+
+      #words {
+        padding-left: 15px;
+        padding-right: 15px;
+        font: 20px sans-serif;
+        border: 1px;
+        border-radius: 10px;
+      }
+
+      #bar-chart {
+        padding-left: 15px;
+        padding-right: 15px;
+      }
+
+      .toolTip {
+        position: absolute;
+        display: none;
+        min-width: 80px;
+        height: auto;
+        color: black;
+        pointer-events: none;
+        padding: 14px;
+        text-align: center;
+        font: 20px Times;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="row">
+        <ul class="main-nav">
+          <h1 class="header-title">Categorical Bar Chart based on armed</h1>
+          <button id="redirectButton" class="btn btn-secondary">Home</button>
+        </ul>
+      </div>
+    </header>
+    <div id="parent">
+      <div class="custom-select" style="width:300px;" id="words">
+        <label>Select :</label>
+        <select class="select-css" name="dropdown" id="combo">
+          <option value="fleeArm">Victims Flee based on armed</option>
+          <option value="mentalArm">Victims Mental Health based on armed</option>
+        </select>
+      </div>
+      <div id="bar-chart" style="width:1000px;height:450px"></div>
+      <div id='container'></div>
+    </div>
+    <script>
+      var margin = {
+          top: 20,
+          right: 20,
+          bottom: 30,
+          left: 180
+        },
+        width = 800 - margin.left - margin.right,
+        height = 450 - margin.top - margin.bottom;
+      var x0 = d3.scale.ordinal().rangeRoundBands([0, width], .1);
+      var x1 = d3.scale.ordinal();
+      var y = d3.scale.linear().range([height, 0]);
+      var xAxis = d3.svg.axis().scale(x0).tickSize(0).orient("bottom");
+      var yAxis = d3.svg.axis().scale(y).orient("left");
+      var svg = d3.select('#bar-chart').append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      d3.csv("https://raw.githubusercontent.com/sunchusanthoshi/DataVisualization/main/fatal-police-shootings-new.csv", function(error, inputCSV) {
+        mentalArmDist(inputCSV);
+        $('select[name="dropdown"]').change(function() {
+          d3.select("svg").remove();
+          svg = d3.select('#bar-chart').append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+          switch (this.value) {
+            case "mentalArm":
+              mentalArmDist(inputCSV);
+              break;
+            case "fleeArm":
+              fleeArmDist(inputCSV);
+              break;
+          }
+        });
+      });
+
+      function BarChart(data) {
+        var color = d3.scale.ordinal().range(["#B19CD9", "#98FF98"]);
+        var categoriesNames = data.map(function(d) {
+          return d.categorie;
+        });
+        var rateNames = data[0].values.map(function(d) {
+          return d.rate;
+        });
+        var tooltip = d3.select("body").append("div").attr("class", "toolTip");
+        x0.domain(categoriesNames);
+        x1.domain(rateNames).rangeRoundBands([0, x0.rangeBand()]);
+        y.domain([0, d3.max(data, function(categorie) {
+          return d3.max(categorie.values, function(d) {
+            return d.value;
+          });
+        })]);
+        svg.append("g").attr("class", "axis axis--x").attr("transform", "translate(0," + height + ")").style('font-weight', 'bold').style('font-size', '18px').attr("fill", "#000").attr("x", width / 2).attr("y", 48).call(xAxis);
+        svg.append("g").attr("class", "axis axis--y").call(yAxis).append("text").attr("fill", "#000").attr("transform", "rotate(-90)").attr("y", -80).attr("x", -height / 2).attr("dy", "1em").style("text-anchor", "middle").text("Number of Victims");
+        svg.select('.y').transition().duration(500).delay(1300).style('opacity', '1');
+        var slice = svg.selectAll(".slice").data(data).enter().append("g").attr("class", "g").attr("transform", function(d) {
+          return "translate(" + x0(d.categorie) + ",0)";
+        });
+        slice.selectAll("rect").data(function(d) {
+          return d.values;
+        }).enter().append("rect").attr("width", x1.rangeBand()).attr("x", function(d) {
+          return x1(d.rate);
+        }).style("fill", function(d) {
+          return color(d.rate)
+        }).attr("y", function(d) {
+          return y(0);
+        }).attr("height", function(d) {
+          return height - y(0);
+        }).on("mouseover", function(d) {
+          tooltip.style("display", "inline-block");
+        }).on("mousemove", function(d) {
+          d3.select(this).style("fill", d3.rgb(color(d.rate)).darker(2));
+          tooltip.style("left", d3.event.pageX - 100 + "px").style("top", d3.event.pageY - 110 + "px").style("display", "inline-block").html("Number of Victims:" + " " + (d.value));
+        }).on("mouseout", function(d) {
+          d3.select(this).style("fill", color(d.rate));
+          tooltip.style("display", "none");
+        });
+        slice.selectAll("rect").transition().delay(function(d) {
+          return Math.random() * 1000;
+        }).duration(1000).attr("y", function(d) {
+          return y(d.value);
+        }).attr("height", function(d) {
+          return height - y(d.value);
+        });
+        var legend = svg.selectAll(".legend").data(data[0].values.map(function(d) {
+          return d.rate;
+        }).reverse()).enter().append("g").attr("class", "legend").attr("transform", function(d, i) {
+          return "translate(0," + i * 20 + ")";
+        }).style("opacity", "0");
+        legend.append("circle").attr("cx", width - 12).attr("r", 8).style("fill", function(d) {
+          return color(d);
+        });
+        legend.append("text").attr("x", width - 24).attr("y", 1).attr("dy", ".35em").style("text-anchor", "end").text(function(d) {
+          return d;
+        });
+        legend.transition().duration(500).delay(function(d, i) {
+          return 1300 + 100 * i;
+        }).style("opacity", "1");
+      }
+
+      function clearChart() {
+        document.getElementById("bar-chart").innerHTML = ""; //reset div
+      }
+
+      function calculateSumOfCat(d) {
+        var sumCat = 0;
+        for (var i = 0; i < d.length; i++) {
+          sumCat = sumCat + d[i].value;
+        }
+        return sumCat;
+      }
+
+      function fleeArmDist(initData) {
+        var dataset = new Array();
+        var sampleData = {};
+        var rateNames = ["Flee", "Not Fleeing"];
+        var category = ["Armed", "Unarmed"];
+        var unarmed = new Array();
+        var armed = new Array();
+        for (var i = 0; i < initData.length; i++) {
+          if (initData[i].armed_with == "unarmed") {
+            unarmed.push(initData[i]);
+          } else {
+            armed.push(initData[i]);
+          }
+        }
+        var catArm = calculateFleeDist(armed);
+        var catUnarm = calculateFleeDist(unarmed);
+        var armData = subFun(catArm, rateNames);
+        var unarmData = subFun(catUnarm, rateNames);
+        dataset.push({
+          "categorie": category[0],
+          "values": armData,
+          "sumCat": calculateSumOfCat(armData)
+        });
+        dataset.push({
+          "categorie": category[1],
+          "values": unarmData,
+          "sumCat": calculateSumOfCat(unarmData)
+        });
+        console.log(dataset);
+        BarChart(dataset);
+      }
+
+      function calculateFleeDist(data) {
+        var flee = 0;
+        var not = 0;
+        for (var i = 0; i < data.length; i++) {
+          if (data[i].flee_status == "not") not = not + 1;
+          else flee = flee + 1;
+        }
+        var cat = [flee, not];
+        return cat;
+      }
+
+      function mentalArmDist(initData) {
+        var dataset = new Array();
+        var sampleData = {};
+        var rateNames = ["Mentally-Unstable", "Stable"];
+        var category = ["Armed", "Unarmed"];
+        var unarmed = new Array();
+        var armed = new Array();
+        for (var i = 0; i < initData.length; i++) {
+          if (initData[i].armed_with == "unarmed") {
+            unarmed.push(initData[i]);
+          } else {
+            armed.push(initData[i]);
+          }
+        }
+        var catArm = calculateMentalDist(armed);
+        var catUnarm = calculateMentalDist(unarmed);
+        var armData = subFun(catArm, rateNames);
+        var unarmData = subFun(catUnarm, rateNames);
+        dataset.push({
+          "categorie": category[0],
+          "values": armData,
+          "sumCat": calculateSumOfCat(armData)
+        });
+        dataset.push({
+          "categorie": category[1],
+          "values": unarmData,
+          "sumCat": calculateSumOfCat(unarmData)
+        });
+        BarChart(dataset);
+      }
+
+      function calculateMentalDist(data) {
+        var ill = 0;
+        var stable = 0;
+        for (var i = 0; i < data.length; i++) {
+          if (data[i].was_mental_illness_related == 'True') ill = ill + 1;
+          else
+          if (data[i].was_mental_illness_related == 'False') stable = stable + 1;
+        }
+        var cat = [ill, stable];
+        return cat;
+      }
+
+      function subFun(inputData, rateNames) {
+        var data = new Array();
+        for (var j1 = 0; j1 < inputData.length; j1++) {
+          data.push({
+            "rate": rateNames[j1],
+            "value": inputData[j1]
+          });
+        }
+        return data;
+      }
+      document.getElementById("redirectButton").addEventListener("click", function() {
+        window.location.href = "MainPage.html";
+      });
+    </script>
+  </body>
+</html>

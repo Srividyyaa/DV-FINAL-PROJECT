@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statewise Age Distribution of Incidents</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+      body {
+        font-family: 'Arial', sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+      }
+
+      .header {
+        color: #333;
+        padding: 10px 20px;
+        text-align: center;
+      }
+
+      #redirectButton {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        padding-bottom: 0.375rem;
+        font-size: 1rem;
+        border-radius: 0.25rem;
+        border: none;
+        color: #fff;
+        background: #6c757d !important;
+        height: auto !important;
+        transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+      }
+
+      #redirectButton:hover {
+        background: #5c636a !important;
+      }
+
+      svg {
+        display: inline-block;
+        vertical-align: top;
+        margin: 10px;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        box-shadow: 0px 0px 10px #aaa;
+      }
+
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+      }
+
+      .axis text {
+        font-size: 10px;
+      }
+
+      .state-title {
+        font-size: 12px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="row">
+        <ul class="main-nav">
+          <button id="redirectButton" class="btn btn-secondary">Home</button>
+        </ul>
+      </div>
+    </header>
+    <div class="header">
+      <h1>Statewise Age Distribution of Incidents</h1>
+    </div>
+    <script>
+      d3.csv("https://raw.githubusercontent.com/sunchusanthoshi/DataVisualization/main/fatal-police-shootings-data.csv").then(function(data) {
+        const processedData = data.filter(d => d.age > 0).map(d => ({
+          state: d.state,
+          age: +d.age
+        }));
+        const dataByState = d3.group(processedData, d => d.state);
+        const maxCount = Math.max(...Array.from(dataByState.values(), arr => arr.length));
+        const colorScale = d3.scaleSequential(d => d3.interpolateGreens(0.3 + 0.7 * (d * d))).domain([0, Math.sqrt(maxCount)]);
+        dataByState.forEach((value, key) => {
+          const svg = d3.select("body").append("svg").attr("width", 250).attr("height", 200);
+          const xScale = d3.scaleLinear().domain([0, d3.max(value, d => d.age)]).range([40, 230]);
+          const yScale = d3.scaleLinear().domain([0, value.length]).range([180, 20]);
+          svg.append("g").attr("class", "axis").attr("transform", "translate(0,180)").call(d3.axisBottom(xScale).ticks(4));
+          svg.append("text").attr("text-anchor", "end").attr("x", 145).attr("y", 195).text("Age");
+          svg.append("g").attr("class", "axis").attr("transform", "translate(40,0)").call(d3.axisLeft(yScale).ticks(5));
+          svg.append("text").attr("text-anchor", "end").attr("transform", "rotate(-90)").attr("y", 15).attr("x", -90).text("Count");
+          svg.append("text").attr("class", "state-title").attr("x", 125).attr("y", 15).attr("text-anchor", "middle").text("State: " + key);
+          svg.selectAll(".point").data(value).enter().append("circle").attr("class", "point").attr("cx", d => xScale(d.age)).attr("cy", (d, i) => yScale(i)).attr("r", 3).style("fill", () => colorScale(Math.sqrt(value.length))).style("opacity", 0.8);
+        });
+        document.getElementById("redirectButton").addEventListener("click", function() {
+          window.location.href = "MainPage.html";
+        });
+      });
+    </script>
+  </body>
+</html>

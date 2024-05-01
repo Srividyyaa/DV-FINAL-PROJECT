@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Visualization</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+  <style>
+    body, html {
+      max-width: 100%;
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    .header-title {
+     font-size: 30px;
+      color: #333;
+      padding: 10px 0;
+      font-weight: bold;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .main-nav {
+      height: 30px;
+      list-style: none;
+      margin-top: 0px;
+      padding: 10px;
+    }
+    .main-nav {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      position: absolute;
+      top: 50px;
+      right: 10px;
+    }
+    .main-nav li {
+      margin-bottom: 10px;
+    }
+    .main-nav .btn {
+      text-decoration: none;
+      color: white;
+      background-color: #808080;
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 4px;
+      display: block;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .state {
+      fill: none;
+      stroke: #a9a9a9;
+      stroke-width: 1;
+    }
+    .state:hover {
+      fill-opacity: 0.6;
+    }
+    #tooltip {
+      position: absolute;
+      text-align: left;
+      padding: 40px;
+      margin: 10px;
+      font: 20px sans-serif;
+      border: 1px;
+      border-radius: 10px;
+      pointer-events: none;
+    }
+    #tooltip h4 {
+      margin: 0;
+      font-size: 32px sans-serif;
+      padding-top: 10px;
+      text-align: center;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #4e6c8b;
+      color: #0e0e0e62;
+      text-decoration: none;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+    #tooltip {
+      background: rgba(128, 128, 128, 0.9);
+      border-radius: 10px;
+      font-size: 14px;
+      width: auto;
+      padding: 6px;
+      color: white;
+      opacity: 0.5;
+    }
+    #tooltip table {
+      table-layout: fixed;
+      padding: 40px;
+    }
+
+    #tooltip tr,
+    td {
+      padding: 7px;
+    }
+
+    #tooltip tr td:nth-child(1) {
+      width: 60px;
+    }
+
+    #tooltip tr td:nth-child(2) {
+      text-align: center;
+    }
+    #map {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <header>
+      <h1 class="header-title">Fatal Shootings in USA from 2015 to 2024</h1>
+    </header>
+    <ul class="main-nav">
+      <li><a href="subPage1.html" class="btn">Interactive Area Chart Visualization</a></li>
+      <li><a href="subPage2.html" class="btn">Categorical Bar Chart based on gender</a></li>
+      <li><a href="subPage4.html" class="btn">Categorical Bar Chart based on armed</a></li>
+      <li><a href="subPage3.html" class="btn">Percentage of armed/unmarmed</a></li>
+      <li><a href="state_age.html" class="btn">State vs Age</a></li>
+    </ul>
+    <div id="map">
+      <svg width="960" height="600" id="statesvg"></svg> 
+    </div>
+    <div id="tooltip"></div>
+  </div>
+
+    <script src="UStates.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script>
+
+    	function tooltipHtml(n, d){
+        var total_white;
+        if(d.white==0){
+          total_white="-";
+        }else{
+          total_white = Number((d.white/d.total*100).toFixed(1))+"%";
+        }
+
+      var total_black;
+      if(d.black==0){
+        total_black="-";
+      }else{
+        total_black = Number((d.black/d.total*100).toFixed(1))+"%";
+      }
+
+      var total_hispanic ;
+      if(d.hispanic==0){
+        total_hispanic="-";
+      }else{
+        total_hispanic = Number((d.hispanic/d.total*100).toFixed(1))+"%";
+      }
+
+      var total_asian ;
+      if(d.asian==0){
+        total_asian="-";
+      }else{
+        total_asian = Number((d.asian/d.total*100).toFixed(1))+"%";
+      }
+
+      var total_native;
+      if(d.native_american==0){
+        total_native="-";
+      }else{
+        total_native = Number((d.native_american/d.total*100).toFixed(1))+"%";
+      }
+
+      var total_other ;
+      if(d.other==0){
+        total_other="-";
+      }else{
+        total_other = Number((d.other/d.total*100).toFixed(1))+"%";
+      }
+          return "<h4><b>"+n+"</b></h4><br><table>"+
+          "<tr style='border-bottom:1px solid black'><td><b>Race</b></td><td><b>Total Deaths<b></td><td>"+"<b> Death Percentage</b>"+"</td><td>"+"</td></tr>"+
+    			"<tr><td>White</td><td>"+(d.white)+"</td><td>"+total_white+"</td><td>"+"</td></tr>"+
+    			"<tr><td>Black</td><td>"+(d.black)+"</td><td>"+total_black+"</td><td>"+"</td></tr>"+
+    			"<tr><td>Hispanic</td><td>"+(d.hispanic)+"</td><td>"+total_hispanic+"</td><td>"+"</td></tr>"+
+    			"<tr><td>Asian</td><td>"+(d.asian)+"</td><td>"+total_asian+"</td><td>"+"</td></tr>"+
+    			"<tr><td>Native</td><td>"+(d.native_american)+"</td><td>"+total_native+"</td><td>"+"</td></tr>"+
+    			"<tr><td>Other</td><td>"+(d.other)+"</td><td>"+total_other+"</td><td>"+"</td></tr>"+
+    			"</table>";
+
+    	}
+     d3.csv("https://raw.githubusercontent.com/sunchusanthoshi/DataVisualization/main/fatal-police-shootings-new.csv", function(error, data){
+
+     	var data = data.filter(function(d){
+     		return d.age !='0';
+     	});
+
+      var sampleData ={};	
+     	["HI", "AK", "FL", "SC", "GA", "AL", "NC", "TN", "RI", "CT", "MA",
+     	"ME", "NH", "VT", "NY", "NJ", "PA", "DE", "MD", "WV", "KY", "OH",
+     	"MI", "WY", "MT", "ID", "WA", "DC", "TX", "CA", "AZ", "NV", "UT",
+     	"CO", "NM", "OR", "ND", "SD", "NE", "IA", "MS", "IN", "IL", "MN",
+     	"WI", "MO", "AR", "OK", "KS", "LS", "VA"]
+
+     		.forEach(function(state){
+
+    		 var white = 0;
+    		 var black = 0;
+    	   var asian = 0;
+    		 var native_american = 0 ;
+      	 var hispanic = 0;
+    	   var other = 0;
+    		 var total = 0;
+
+     			for (var i=0;i<data.length; i++) {
+    						if(data[i].state==state){
+    								if(data[i].race=="W"){
+                      white = white + 1;
+                    }
+    								else
+    							  	if(data[i].race=="B"){
+                        black = black + 1;
+                      }
+    									else
+    										if(data[i].race=="A"){
+                           asian = asian + 1;
+                         }
+    										else
+    											if(data[i].race=="N"){
+                            native_american = native_american + 1;
+                          }
+    											else
+    												if(data[i].race=="H"){
+                              hispanic = hispanic+1;
+                            }
+    												else
+                              if(data[i].race=="O"){
+                              }
+    							        total = total+1;
+    					}
+     				}
+
+     			sampleData[state]={white:white,
+    				                 black:black,
+    												 asian:asian,
+    												 hispanic:hispanic,
+    												 native_american:native_american,
+    												 other:other,
+    												 total:total,
+    												 color: d3.interpolate( "#FFC0CB","#800080")(total / 1143)}
+
+     		});
+		uStates.draw("#statesvg", sampleData, tooltipHtml);
+    d3.select(self.frameElement).style("height", "1000px");
+     });
+</script>
+  </body>
+</html>
